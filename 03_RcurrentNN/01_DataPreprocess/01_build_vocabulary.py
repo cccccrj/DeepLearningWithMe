@@ -1,49 +1,66 @@
-from torchtext.vocab import Vocab
-from collections import Counter
+# -*- coding: utf-8 -*- #
+
 import jieba
+from torchtext.vocab import Vocab, vocab
+from collections import Counter, OrderedDict
+
+
+import pandas as pd
+import torch
+from torchtext import data
+from torchtext.vocab import Vectors
+from torchtext.datasets import imdb
+from torch.nn import init
+from tqdm import tqdm
+import nltk
 
 
 def tokenizer(s, word=False):
     """
-    Args:
-        s:
-        word: 是否采用分字模式
-    Returns:
+    :param s:
+    :param word:  True表示按字切分
+    :return:
     """
     if word:
         r = [w for w in s]
     else:
-        s = jieba.cut(s, cut_all=False)
+        s = jieba.cut(s, cut_all=False)  # 普通分词结果
         r = " ".join(s).split()
     return r
 
 
-def my_tokenizer(s):
-    """
-    返回tokenize后的结果
-    """
-    s = s.replace(',', " ,").replace(".", " .")
-    return s.split()
-
-
-def build_vocab(tokenizer, filepath, word, min_freq, specials=None):
+def build_vocab(tokenizer, filepath, min_freq, specials=None):
     if specials is None:
         specials = ['<unk>', '<pad>', '<bos>', '<eos>']
     counter = Counter()
     with open(filepath, encoding='utf8') as f:
         for string_ in f:
-            counter.update(tokenizer(string_.strip(), word))
-    return Vocab(counter, min_freq=min_freq, specials=specials)
+            counter.update(tokenizer(string_.strip(), word=True))
+
+    print(f"counter:{counter}")  # 计数
+
+    sorted_by_freq_tuples = sorted(counter.items(), key=lambda x: x[1], reverse=True)  # 构造成可接受的格式：[(单词,num), ...]
+    ordered_dict = OrderedDict(sorted_by_freq_tuples)
+
+    return vocab(ordered_dict, min_freq=min_freq, specials=specials)
+
+
+def main():
+    s = "问君能有几多愁？恰似一江春水向东流。"
+    result = tokenizer(s=s, word=True)
+    print(result)
+
+    filepath = '../data/tokenizer_test.txt'
+    my_vocab = build_vocab(tokenizer, filepath, min_freq=1,)
+
+    print(my_vocab['会'])
+
+    print("word->token：", my_vocab.get_stoi())
+
+    print("token->word：", my_vocab.get_itos())
+
+    pass
 
 
 if __name__ == '__main__':
-    filepath = 'data_01.txt'
-    vocab = build_vocab(tokenizer, filepath, word=True, min_freq=1,
-                        specials=['<unk>', '<pad>'])
-    print(vocab.freqs)  # 得到一个字典，返回语料中每个单词所出现的频率；
-    print(vocab.itos)  # 得到一个列表，返回词表中的每一个词；
-    print(vocab.itos[2])  # 通过索引返回得到词表中对应的词；
-    print(vocab.stoi)  # 得到一个字典，返回词表中每个词的索引；
-    print(vocab.stoi['are'])  # 通过单词返回得到词表中对应的索引
-    print(vocab['are'])  # 通过单词返回得到词表中对应的索引
-    print(len(vocab))
+    main()
